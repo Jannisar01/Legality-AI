@@ -61,6 +61,23 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
+// Gemini answers in light Markdown. Show **bold** as bold and "* " list markers as bullets
+// instead of printing the raw symbols; everything else stays plain text.
+function FormattedText({ text }: { text: string }) {
+  const lines = text.replace(/^\s*[*-]\s+/gm, '• ');
+  return (
+    <>
+      {lines.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+        part.startsWith('**') && part.endsWith('**') && part.length > 4 ? (
+          <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 export default function App() {
   const [contractText, setContractText] = useState('');
   const [contractType, setContractType] = useState<ContractType>('Service Agreement');
@@ -788,7 +805,7 @@ export default function App() {
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] rounded-2xl p-3 text-sm ${msg.role === 'user' ? 'bg-teal-500/20 text-teal-100 border border-teal-500/30' : 'bg-zinc-900/80 text-zinc-300 border border-white/5'}`}>
-                      <span className="whitespace-pre-wrap">{msg.content}</span>
+                      <span className="whitespace-pre-wrap"><FormattedText text={msg.content} /></span>
                     </div>
                   </div>
                 ))}
