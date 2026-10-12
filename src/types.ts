@@ -24,6 +24,13 @@ export interface RiskBreakdown {
   explanation: string;
 }
 
+/** Result of checking a flagged clause's evidence_quote against the contract text (src/evidence.ts). */
+export interface EvidenceCheck {
+  status: 'verified' | 'approximate' | 'not_found';
+  /** share of the quote's words found in order in the contract, 0 to 1 */
+  score: number;
+}
+
 export interface FlaggedClause {
   clause_name: string;
   category: string;
@@ -35,6 +42,8 @@ export interface FlaggedClause {
   evidence_quote: string;
   recommendation: string;
   relevant_laws: string[];
+  /** set by the server after the model responds; absent on analyses made before the check existed */
+  evidence_check?: EvidenceCheck;
 }
 
 export interface MissingProtection {

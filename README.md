@@ -22,6 +22,21 @@ View your app in AI Studio: https://ai.studio/apps/4413e487-409d-4331-9278-9137d
 The Gemini calls run on the server (`api/analyze.ts`, `api/chat.ts`, `api/revise.ts`), so the API
 key never reaches the browser. In development, Vite serves those same handlers at `/api/*`.
 
+## Evidence check
+
+The model must quote the contract for every flagged clause. `src/evidence.ts` then checks each
+`evidence_quote` against the contract text without another model call: the quote's words must
+appear in the contract in the same order, ignoring case, punctuation, typographic quotes and line
+breaks, and a quote with an ellipsis must have each part present in order. Each clause gets an
+`evidence_check`:
+
+- `verified`: found word for word
+- `approximate`: at least 85% of a quote of five or more words matches in order (shown with a warning)
+- `not_found`: not located in the contract; the card says the finding is unverified
+
+The server (`api/analyze.ts`) attaches the check before the analysis leaves it, so the JSON export
+carries it too. Run the tests with `npm test`.
+
 ## Deploy on Vercel (free)
 
 1. On vercel.com, choose **Add New → Project** and import this repository. Vercel detects Vite.

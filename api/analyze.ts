@@ -1,5 +1,6 @@
 import { Type } from '@google/genai';
 import { gemini, route, text } from '../server/gemini';
+import { attachEvidenceChecks } from '../src/evidence';
 
 export default route(async (body) => {
   const contractText = text(body, 'contractText');
@@ -133,5 +134,12 @@ Make the analysis robust for:
       }
     }
   });
-  return { text: response.text };
+  // Check every evidence quote against the contract before the analysis leaves the server.
+  let analysis;
+  try {
+    analysis = JSON.parse(response.text ?? '');
+  } catch {
+    return { text: response.text };
+  }
+  return { text: JSON.stringify(attachEvidenceChecks(analysis, contractText)) };
 });

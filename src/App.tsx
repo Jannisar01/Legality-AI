@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { ContractType, AnalysisResult, RiskLevel, FlaggedClause, MissingProtection, ObligationsByParty } from './types';
 import { mockAnalysisResult } from './mockData';
+import { attachEvidenceChecks, evidenceSummary } from './evidence';
 
 const contractTypes: ContractType[] = [
   'NDA',
@@ -246,7 +247,12 @@ export default function App() {
       const response = await callApi('/api/analyze', { contractType, contractText });
 
       if (response.text) {
-        setResult(JSON.parse(response.text));
+        const parsed: AnalysisResult = JSON.parse(response.text);
+        // the server attaches evidence checks; fill them in here if it did not
+        const checked = parsed.flagged_clauses?.every((c) => c.evidence_check)
+          ? parsed
+          : attachEvidenceChecks(parsed, contractText);
+        setResult(checked);
       }
     } catch (error) {
       console.error("Analysis failed:", error);
@@ -703,6 +709,7 @@ export default function App() {
                         {result.flagged_clauses.length} Issues Found
                       </span>
                     </div>
+                    <EvidenceSummaryLine result={result} />
                     
                     <div className="space-y-4">
                       {result.flagged_clauses.map((clause, i) => (
@@ -929,6 +936,7 @@ const FlaggedClauseItem: React.FC<{ clause: FlaggedClause, onTag: (text: string)
           <Badge level={clause.risk_level} />
           <span className="text-sm font-medium text-zinc-200">{clause.clause_name}</span>
           <span className="text-xs text-zinc-500 hidden sm:inline-block">({clause.category})</span>
+          <EvidenceBadge clause={clause} />
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -957,6 +965,7 @@ const FlaggedClauseItem: React.FC<{ clause: FlaggedClause, onTag: (text: string)
               <div className="my-4 p-4 bg-[#050505]/50 rounded-xl border border-zinc-800/50 font-mono text-[13px] text-zinc-400 leading-relaxed border-l-2 border-l-rose-500/50 shadow-inner">
                 "{clause.evidence_quote}"
               </div>
+              <EvidenceNote clause={clause} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
                 <div>
                   <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-400 mb-2">
@@ -1150,3 +1159,56 @@ function getLevelColor(level: RiskLevel) {
   }
 }
 
+
+// Shows whether the quoted evidence was found in the contract text (see src/evidence.ts).
+const EvidenceBadge: React.FC<{ clause: FlaggedClause }> = ({ clause }) => {
+  const check = clause.evidence_check;
+  if (!check || check.status === 'verified') {
+    return check ? (
+      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">
+        Quote verified
+      </span>
+    ) : null;
+  }
+  if (check.status === 'approximate') {
+    return (
+      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+        Quote approximate ({Math.round(check.score * 100)}%)
+      </span>
+    );
+  }
+  return (
+    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30">
+      Quote not found in contract
+    </span>
+  );
+};
+
+const EvidenceNote: React.FC<{ clause: FlaggedClause }> = ({ clause }) => {
+  const check = clause.evidence_check;
+  if (!check || check.status === 'verified') return null;
+  const text =
+    check.status === 'approximate'
+      ? `This quote matches the contract only approximately (${Math.round(check.score * 100)}% of its words, in order). Compare it with the contract before relying on it.`
+      : 'This quote could not be found in the contract text. The model may have paraphrased or invented it, so treat this finding as unverified until you locate the clause yourself.';
+  return (
+    <p
+      className={`-mt-2 mb-4 text-xs leading-relaxed ${check.status === 'approximate' ? 'text-amber-400/90' : 'text-rose-400/90'}`}
+    >
+      {text}
+    </p>
+  );
+};
+
+const EvidenceSummaryLine: React.FC<{ result: AnalysisResult }> = ({ result }) => {
+  if (!result.flagged_clauses.some((c) => c.evidence_check)) return null;
+  const counts = evidenceSummary(result);
+  const total = result.flagged_clauses.length;
+  return (
+    <p className="-mt-3 mb-5 text-xs text-zinc-500">
+      Evidence check: {counts.verified} of {total} quotes found word for word in the contract
+      {counts.approximate > 0 && `, ${counts.approximate} approximate`}
+      {counts.not_found > 0 && `, ${counts.not_found} not found`}.
+    </p>
+  );
+};
