@@ -2,9 +2,15 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Legality: an AI contract risk screener
 
-This contains everything you need to run your app locally.
+Legality reads a contract and flags risky clauses, missing protections and points to negotiate, each backed by a quote from the contract that the code checks is really there.
+
+**Case study:** [sanaullahjannisar.com/work/legality](https://sanaullahjannisar.com/work/legality/), with the story, results and architecture. Built by [Sanaullah Jannisar](https://sanaullahjannisar.com), AI engineer.
+
+## Run it locally
+
+This contains everything you need to run the app locally.
 
 View your app in AI Studio: https://ai.studio/apps/4413e487-409d-4331-9278-9137d2ac9ca3
 
